@@ -4,6 +4,7 @@ on:
     branches: [main]
   schedule:
   - cron: '55 8 1 * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,7 +18,21 @@ jobs:
     - run: git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
     - run: pre-commit-mirror . --language python --package-name clang-tidy  --id=clang-tidy --types-or c++ --types-or c --types-or 'c#'  --types-or 'objective-c' --args=--format-style=file
     - run: |
-        git remote set-url origin https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY
-        git push origin HEAD:refs/heads/main --tags
+        git checkout -b update-branch-${{ github.run_id }}
+        git add .
+        git commit -m "Automated update"
+        git push origin update-branch-${{ github.run_id }}
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Automated update"
+        branch: update-branch-${{ github.run_id }}
+        base: main
+        title: "Automated update"
+        body: "This is an automated update from GitHub Actions."
+        delete-branch: true
+
